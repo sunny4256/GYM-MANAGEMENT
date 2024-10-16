@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth, db } from "../firebase";
-import { doc, setDoc } from "firebase/firestore";
+import { auth, db } from "../services/firebase";
+import { doc, setDoc, collection, addDoc } from "firebase/firestore";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { EyeIcon, EyeOffIcon } from 'lucide-react';
 
-const stripePromise = loadStripe("pk_test_your_publishable_key_here");
+const stripePromise = loadStripe("pk_test_51Q5sRVKi8gR534EePgWB39j4AIL33Rol6qLhzJ7XIRTpgM06TIi9xkadWzXGnHJ3uZJpUt55aBgPdh30rFenG3n000V3iYclM5");
 
 const membershipPrices = {
   silver: 49.99,
@@ -77,6 +77,7 @@ function RegisterForm() {
       // TODO: Send paymentMethod.id to your server for processing
       console.log("Payment Method:", paymentMethod.id);
 
+      // Add user details to Firestore
       await setDoc(doc(db, "users", user.uid), {
         email,
         firstName,
@@ -87,7 +88,22 @@ function RegisterForm() {
         paymentMethodId: paymentMethod.id,
       });
 
+      // Add order details to Firestore
+      await addDoc(collection(db, "orders"), {
+        userId: user.uid,
+        email: email,
+        membership: membership,
+        price: membershipPrices[membership],
+        dateOfPayment: new Date().toISOString(),
+      });
+
       setSuccessMessage(`Welcome to FitTech Gym, ${firstName}! Your ${membership.toUpperCase()} membership is active.`);
+      
+      // Redirect to login page after a short delay
+      setTimeout(() => {
+        router.push("/login");
+      }, 2000);  // 2 second delay
+
     } catch (error) {
       setError(error.message);
     }
